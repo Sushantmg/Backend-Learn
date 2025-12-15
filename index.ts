@@ -1,15 +1,22 @@
-const express = require("express");
-const app = express();
-const port = 3005;
-const cors = require("cors");
+import express, { Application, Request, Response } from "express";
+import cors from "cors";
 import multer from "multer";
 
-const upload =  multer ({
-  storage : multer.memoryStorage(),
-})
- 
+// Routes
+import userRoutes from "./routes/user";
+import productRoutes from "./routes/product";
+import authRoutes from "./routes/auth";
+import cartRoutes from "./routes/cart";
 
+const app: Application = express();
+const port = 3005;
 
+// Multer setup
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
+
+// Middlewares
 app.use(express.json());
 app.use(
   cors({
@@ -18,33 +25,30 @@ app.use(
     credentials: true,
   })
 );
-const userRoutes = require("./routes/user");
-const productRoutes = require("./routes/product");
-const authRoutes = require("./routes/auth");
-const cart = require("./routes/cart");
 
-app.use("/cart", cart);
-
+// Routes
+app.use("/cart", cartRoutes);
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
 app.use("/auth", authRoutes);
 
-app.post("/file-example",(req,res) =>{
-  try{
+// Test file route
+app.post("/file-example", (req: Request, res: Response) => {
+  try {
     console.log(req.body);
     res.json("OK");
-  }
-  catch(error)
-  {
-    console.log(error);
+  } catch (error) {
+    console.error(error);
     res.status(500).json("error");
   }
-}
-);
-app.get("/", (req, res) => {
+});
+
+// Home route
+app.get("/", (req: Request, res: Response) => {
   res.send("🚀 API Server running! Use /users or /products");
 });
 
+// Server start
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
