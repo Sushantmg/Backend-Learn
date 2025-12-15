@@ -1,28 +1,45 @@
-const express = require("express");
-const router = express.Router();
-
-const {
+import { Router, Request, Response, NextFunction } from "express";
+import {
   getAllProducts,
   getProductById,
   postProduct,
   updateProduct,
   deleteProduct,
-} = require("./handler");
+} from "./handler";
 
-const { validateToken ,allowRoles} = require("../../middleware/authMiddleware");
+import { validateToken, allowRoles } from "../../middleware/authMiddleware";
 
-router.use((req, res, next) => {
+const router = Router();
+
+// Logger middleware
+router.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
+// Routes
+router.get("/", getAllProducts);
+router.get("/:id", getProductById);
 
-router.get("/", getAllProducts);       
-router.get("/:id", getProductById);   
+router.post(
+  "/",
+  validateToken,
+  allowRoles("STAFF", "SUPERUSER"),
+  postProduct
+);
 
+router.put(
+  "/:id",
+  validateToken,
+  allowRoles("SUPERUSER"),
+  updateProduct
+);
 
-router.post("/", validateToken, allowRoles("STAFF","SUPERUSER"), postProduct);
-router.put("/:id", validateToken, allowRoles("SUPERUSER"), updateProduct);
-router.delete("/:id", validateToken, allowRoles("SUPERUSER"), deleteProduct);
+router.delete(
+  "/:id",
+  validateToken,
+  allowRoles("SUPERUSER"),
+  deleteProduct
+);
 
-module.exports = router;
+export default router;
