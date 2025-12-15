@@ -1,9 +1,13 @@
-const prisma = require("../../prisma-config");
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
 
-const getAllCarts = async (req, res) => {
+// -------------------------
+// GET ALL CART ITEMS
+// -------------------------
+export const getAllCarts = async (req, res) => {
   try {
-    const user_id = req.user.id;
+    const user_id = req.user_id; // string ObjectId
     const carts = await prisma.userCart.findMany({
       where: { user_id },
       include: { product: true },
@@ -15,35 +19,36 @@ const getAllCarts = async (req, res) => {
   }
 };
 
-const addToCart = async (req, res) => {
+// -------------------------
+// ADD TO CART
+// -------------------------
+export const addToCart = async (req, res) => {
   try {
     const { product_id } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.user_id;
 
     if (!product_id) return res.status(400).json({ error: "Product ID required" });
 
     const productExists = await prisma.product.findUnique({
-      where: { id: parseInt(product_id) },
+      where: { id: product_id }, // string ObjectId
     });
-
     if (!productExists) return res.status(400).json({ error: "Product does not exist" });
 
     const existingCart = await prisma.userCart.findUnique({
-      where: { user_id_product_id: { user_id, product_id: parseInt(product_id) } },
+      where: { user_id_product_id: { user_id, product_id } },
     });
 
     if (existingCart) {
       const updatedCart = await prisma.userCart.update({
-        where: { user_id_product_id: { user_id, product_id: parseInt(product_id) } },
+        where: { user_id_product_id: { user_id, product_id } },
         data: { count: existingCart.count + 1 },
       });
       return res.json({ message: "Cart updated", data: updatedCart });
     }
 
     const newCart = await prisma.userCart.create({
-      data: { user_id, product_id: parseInt(product_id), count: 1 },
+      data: { user_id, product_id, count: 1 },
     });
-
     res.json({ message: "Product added to cart", data: newCart });
   } catch (error) {
     console.error(error);
@@ -51,33 +56,32 @@ const addToCart = async (req, res) => {
   }
 };
 
-
-const removeFromCart = async (req, res) => {
+// -------------------------
+// REMOVE FROM CART
+// -------------------------
+export const removeFromCart = async (req, res) => {
   try {
     const { product_id } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.user_id;
 
     if (!product_id) return res.status(400).json({ error: "Product ID required" });
 
     const existingCart = await prisma.userCart.findUnique({
-      where: { user_id_product_id: { user_id, product_id: parseInt(product_id) } },
+      where: { user_id_product_id: { user_id, product_id } },
     });
-
     if (!existingCart) return res.status(400).json({ error: "Product not in cart" });
 
     if (existingCart.count > 1) {
       const updatedCart = await prisma.userCart.update({
-        where: { user_id_product_id: { user_id, product_id: parseInt(product_id) } },
+        where: { user_id_product_id: { user_id, product_id } },
         data: { count: existingCart.count - 1 },
       });
       return res.json({ message: "Cart updated", data: updatedCart });
     }
 
-    
     await prisma.userCart.delete({
-      where: { user_id_product_id: { user_id, product_id: parseInt(product_id) } },
+      where: { user_id_product_id: { user_id, product_id } },
     });
-
     res.json({ message: "Product removed from cart" });
   } catch (error) {
     console.error(error);
@@ -85,9 +89,12 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-const clearCart = async (req, res) => {
+// -------------------------
+// CLEAR CART
+// -------------------------
+export const clearCart = async (req, res) => {
   try {
-    const user_id = req.user.id;
+    const user_id = req.user_id;
     await prisma.userCart.deleteMany({ where: { user_id } });
     res.json({ message: "Cart cleared" });
   } catch (error) {
@@ -95,5 +102,3 @@ const clearCart = async (req, res) => {
     res.status(500).json({ error: "Something went wrong" });
   }
 };
-
-module.exports = { getAllCarts, addToCart, removeFromCart, clearCart };
