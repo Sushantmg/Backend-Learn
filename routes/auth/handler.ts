@@ -1,26 +1,34 @@
-const { PrismaClient } = require("@prisma/client"); // Correct import
-const prisma = new PrismaClient();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
 dotenv.config();
-const SECRET_KEY = process.env.JWT_SECRET;
 
-async function login(req, res) {
+const prisma = new PrismaClient();
+const SECRET_KEY = process.env.JWT_SECRET as string;
+
+/**
+ * LOGIN
+ */
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
+    }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user)
+    if (!user) {
       return res.status(401).json({ error: "Email/Password does not match" });
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch)
+    if (!passwordMatch) {
       return res.status(401).json({ error: "Email/Password does not match" });
+    }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -39,13 +47,15 @@ async function login(req, res) {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
-
-async function userRegister(req, res) {
+/**
+ * USER REGISTER
+ */
+export const userRegister = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
 
@@ -55,7 +65,9 @@ async function userRegister(req, res) {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ error: "User with this email already exists" });
+      return res
+        .status(409)
+        .json({ error: "User with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -65,20 +77,23 @@ async function userRegister(req, res) {
         name,
         email,
         password: hashedPassword,
-        // role is optional now, default USER will be used
       },
     });
 
-    console.log("✅ New user created:", newUser);
-    res.status(201).json({ result: "Registration Successful", user: newUser });
-  } catch (error) {
-    console.error("💥 Registration Error:", error);
+    res.status(201).json({
+      result: "Registration Successful",
+      user: newUser,
+    });
+  } catch (error: any) {
+    console.error("Registration error:", error);
     res.status(500).json({ error: error.message || "Something went wrong" });
   }
-}
+};
 
-
-async function staffRegister(req, res) {
+/**
+ * STAFF REGISTER (SUPERUSER ONLY)
+ */
+export const staffRegister = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
 
@@ -88,7 +103,9 @@ async function staffRegister(req, res) {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ error: "Staff with this email already exists" });
+      return res
+        .status(409)
+        .json({ error: "Staff with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -98,7 +115,7 @@ async function staffRegister(req, res) {
         name,
         email,
         password: hashedPassword,
-        role: "STAFF", // Explicitly set STAFF
+        role: "STAFF",
       },
     });
 
@@ -106,59 +123,98 @@ async function staffRegister(req, res) {
       result: "Staff Registration Successful",
       user: newStaff,
     });
-  } catch (error) {
-    console.error("Staff Registration Error:", error);
+  } catch (error: any) {
+    console.error("Staff registration error:", error);
     res.status(500).json({ error: error.message || "Something went wrong" });
   }
-}
+};
 
-
-async function getMe(req, res) {
+/**
+ * GET ME
+ * req.user_id comes from validateToken middleware
+ */
+export const getMe = async (
+  req: Request & { user_id?: number },
+  res: Response
+) => {
   try {
-    const id = req.user_id; 
+    const id = req.user_id;
+
+    if (!id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
+
     res.json(user);
   } catch (error) {
-    console.error(error);
+    console.error("GetMe error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
-
-async function changePassword(req, res) {
+/**
+ * CHANGE PASSWORD
+ */
+export const changePassword = async (
+  req: Request & { user_id?: number },
+  res: Response
+) => {
   try {
     const id = req.user_id;
     const { oldPassword, newPassword } = req.body;
 
-    if (!oldPassword || !newPassword)
-      return res.status(400).json({ error: "Both old and new password are required" });
+    if (!id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Both old and new password are required" });
+    }
 
     const user = await prisma.user.findUnique({ where: { id } });
-    const isOldPasswordCorrect = await bcrypt.compare(oldPassword, user.password);
-    if (!isOldPasswordCorrect)
-      return res.status(400).json({ error: "Your old password does not match" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    if (oldPassword === newPassword)
-      return res.status(400).json({ error: "Old and new password cannot be the same" });
+    const isOldPasswordCorrect = await bcrypt.compare(
+      oldPassword,
+      user.password
+    );
+    if (!isOldPasswordCorrect) {
+      return res
+        .status(400)
+        .json({ error: "Your old password does not match" });
+    }
+
+    if (oldPassword === newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Old and new password cannot be the same" });
+    }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    await prisma.user.update({ where: { id }, data: { password: hashedNewPassword } });
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedNewPassword },
+    });
 
     res.json({ result: "Password successfully changed" });
   } catch (error) {
-    console.error(error);
+    console.error("Change password error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
-}
-
-module.exports = {
-  login,
-  userRegister,
-  staffRegister,
-  getMe,
-  changePassword,
 };

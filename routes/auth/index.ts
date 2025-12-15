@@ -1,38 +1,50 @@
-const express = require("express");
-const {
+import { Router, Request, Response } from "express";
+import {
   login,
   userRegister,
   staffRegister,
   getMe,
   changePassword,
-} = require("./handler");
-const {
+} from "./handler";
+
+import {
   validateToken,
   superUserOnly,
   staffOnly,
   allowRoles,
-} = require("../../middleware/authMiddleware");
+} from "../../middleware/authMiddleware";
 
-const router = express.Router();
-
+const router = Router();
 
 router.post("/login", login);
 router.post("/register", userRegister);
 
-
-router.post("/staff-register", validateToken, superUserOnly, staffRegister);
-
+router.post(
+  "/staff-register",
+  validateToken,
+  superUserOnly,
+  staffRegister
+);
 
 router.get("/me", validateToken, getMe);
 router.post("/change-password", validateToken, changePassword);
 
-router.get("/staff-dashboard", validateToken, staffOnly, (req, res) => {
-  res.json({ message: "Welcome, staff or superuser!" });
-});
+router.get(
+  "/staff-dashboard",
+  validateToken,
+  staffOnly,
+  (req: Request, res: Response) => {
+    res.json({ message: "Welcome, staff or superuser!" });
+  }
+);
 
+router.get(
+  "/admin-only",
+  validateToken,
+  allowRoles("SUPERUSER"),
+  (req: Request, res: Response) => {
+    res.json({ message: "Welcome, superuser!" });
+  }
+);
 
-router.get("/admin-only", validateToken, allowRoles("SUPERUSER"), (req, res) => {
-  res.json({ message: "Welcome, superuser!" });
-});
-
-module.exports = router;
+export default router;
