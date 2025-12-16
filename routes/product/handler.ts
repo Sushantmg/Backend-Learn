@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import prisma from "../../prisma-config";
-import { productSchema } from "../../schemas/product.schema"; // adjust path if needed
 
+// -------------------------
+// GET ALL PRODUCTS
+// -------------------------
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany();
@@ -12,12 +14,15 @@ export const getAllProducts = async (req: Request, res: Response) => {
   }
 };
 
+// -------------------------
+// GET PRODUCT BY ID
+// -------------------------
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     const product = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id }, // ✅ MongoDB ObjectId is STRING
     });
 
     if (!product) {
@@ -31,14 +36,19 @@ export const getProductById = async (req: Request, res: Response) => {
   }
 };
 
+// -------------------------
+// CREATE PRODUCT
+// -------------------------
 export const postProduct = async (req: Request, res: Response) => {
   try {
-    const validatedData = productSchema.parse(req.body);
+    const { title, description, price, rating } = req.body;
 
-    const { title, description, price, rating } = validatedData;
+    if (!title || !description || price === undefined || rating === undefined) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
 
-    const existingProduct = await prisma.product.findUnique({
-      where: { title },
+    const existingProduct = await prisma.product.findFirst({
+      where: { title }, // ✅ findFirst (title is NOT unique)
     });
 
     if (existingProduct) {
@@ -58,26 +68,22 @@ export const postProduct = async (req: Request, res: Response) => {
       message: "Product created successfully",
       data: newProduct,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in postProduct:", error);
-
-    if (error?.errors) {
-      return res.status(400).json({
-        errors: error.errors,
-      });
-    }
-
     res.status(500).json({ error: "Something went wrong" });
   }
 };
 
+// -------------------------
+// UPDATE PRODUCT
+// -------------------------
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, description, price, rating } = req.body;
 
     const product = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id },
     });
 
     if (!product) {
@@ -85,12 +91,12 @@ export const updateProduct = async (req: Request, res: Response) => {
     }
 
     const updatedProduct = await prisma.product.update({
-      where: { id: Number(id) },
+      where: { id },
       data: {
         title: title ?? product.title,
         description: description ?? product.description,
-        price: price ? Number(price) : product.price,
-        rating: rating ? Number(rating) : product.rating,
+        price: price !== undefined ? Number(price) : product.price,
+        rating: rating !== undefined ? Number(rating) : product.rating,
       },
     });
 
@@ -101,12 +107,15 @@ export const updateProduct = async (req: Request, res: Response) => {
   }
 };
 
+// -------------------------
+// DELETE PRODUCT
+// -------------------------
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     const product = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id },
     });
 
     if (!product) {
@@ -114,7 +123,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
     }
 
     await prisma.product.delete({
-      where: { id: Number(id) },
+      where: { id },
     });
 
     res.status(200).json({ message: "Product deleted successfully" });
