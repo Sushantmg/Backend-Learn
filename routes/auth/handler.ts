@@ -65,9 +65,7 @@ export const userRegister = async (req: Request, res: Response) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res
-        .status(409)
-        .json({ error: "User with this email already exists" });
+      return res.status(409).json({ error: "User with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -103,9 +101,7 @@ export const staffRegister = async (req: Request, res: Response) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res
-        .status(409)
-        .json({ error: "Staff with this email already exists" });
+      return res.status(409).json({ error: "Staff with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -134,7 +130,7 @@ export const staffRegister = async (req: Request, res: Response) => {
  * req.user_id comes from validateToken middleware
  */
 export const getMe = async (
-  req: Request & { user_id?: number },
+  req: Request & { user_id?: string },
   res: Response
 ) => {
   try {
@@ -145,14 +141,14 @@ export const getMe = async (
     }
 
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id: String(id) },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 
@@ -167,7 +163,7 @@ export const getMe = async (
  * CHANGE PASSWORD
  */
 export const changePassword = async (
-  req: Request & { user_id?: number },
+  req: Request & { user_id?: string },
   res: Response
 ) => {
   try {
@@ -184,7 +180,10 @@ export const changePassword = async (
         .json({ error: "Both old and new password are required" });
     }
 
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await prisma.user.findUnique({
+      where: { id: String(id) },
+    });
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -193,6 +192,7 @@ export const changePassword = async (
       oldPassword,
       user.password
     );
+
     if (!isOldPasswordCorrect) {
       return res
         .status(400)
@@ -208,7 +208,7 @@ export const changePassword = async (
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
-      where: { id },
+      where: { id: String(id) },
       data: { password: hashedNewPassword },
     });
 
