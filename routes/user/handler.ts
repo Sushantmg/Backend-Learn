@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../../prisma-config"; // Convert require → import
+import prisma from "../../prisma-config";
 import bcrypt from "bcryptjs";
 
 // -------------------------
@@ -15,7 +15,7 @@ export const updateRole = async (req: Request, res: Response): Promise<void> => 
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: parseInt(userId) },
+      where: { id: userId }, // ✅ string ObjectId
       data: { role },
     });
 
@@ -35,18 +35,18 @@ export async function getAllUsers(req: Request, res: Response): Promise<void> {
   try {
     const users = await prisma.user.findMany({
       select: {
-        email: true,
         id: true,
         name: true,
+        email: true,
         role: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true, // ✅ fixed
+        updated_at: true, // ✅ fixed
       },
     });
 
     res.json({ result: users });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ error: "Something went wrong" });
   }
 }
@@ -59,8 +59,14 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
     const { id } = req.params;
 
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(id) },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      where: { id }, // ✅ string
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        created_at: true,
+      },
     });
 
     if (!user) {
@@ -70,7 +76,6 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 
     res.json({
       message: "User fetched",
-      user: req.user, // this comes from middleware
       data: user,
     });
   } catch (error) {
@@ -101,13 +106,23 @@ export const postUser = async (req: Request, res: Response): Promise<void> => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: "USER" },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "USER",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        created_at: true,
+      },
     });
 
     res.status(201).json({
       message: "User created",
-      user: req.user,
       data: newUser,
     });
   } catch (error) {
@@ -125,14 +140,19 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const { name, email } = req.body;
 
     const updatedUser = await prisma.user.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { name, email },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        created_at: true,
+      },
     });
 
     res.json({
       message: "User updated",
-      user: req.user,
       data: updatedUser,
     });
   } catch (error) {
@@ -149,13 +169,10 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     const { id } = req.params;
 
     await prisma.user.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
-    res.json({
-      message: "User deleted",
-      user: req.user,
-    });
+    res.json({ message: "User deleted" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Something went wrong" });
@@ -165,14 +182,12 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 // -------------------------
 // STAFF DASHBOARD
 // -------------------------
-export const getStaffDashboard = async (req: Request, res: Response): Promise<void> => {
-  try {
-    res.json({
-      message: "Welcome to the STAFF dashboard",
-      user: req.user,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Something went wrong" });
-  }
+export const getStaffDashboard = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  res.json({
+    message: "Welcome to the STAFF dashboard",
+    user: req.user,
+  });
 };

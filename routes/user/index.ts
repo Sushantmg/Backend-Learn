@@ -9,7 +9,8 @@ import {
   updateRole,
 } from "./handler";
 
-import { validateToken, allowRoles } from "../../middleware/authMiddleware;
+import { validateToken, allowRoles } from "../../middleware/authMiddleware";
+
 import { validationMiddleware } from "../../middleware/validationMiddleware";
 import { userSchema } from "../../utils/schema";
 
