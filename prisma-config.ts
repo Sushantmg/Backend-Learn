@@ -1,4 +1,5 @@
-// prisma-config.js
-const { PrismaClient, Roles } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
-module.exports = { prisma, Roles };
+
+export default prisma;
