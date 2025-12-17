@@ -3,9 +3,9 @@ import "express";
 declare module "express" {
   interface Request {
     user?: {
-      id: number;
+      id: string;     // ✅ STRING
       email: string;
-      role: string;
+      role: "USER" | "STAFF" | "SUPERUSER";
     };
   }
 }
