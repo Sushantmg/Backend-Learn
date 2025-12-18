@@ -9,3 +9,7 @@ declare module "express" {
     };
   }
 }
+
+export interface UploadRequest extends Request{
+  image?:any;
+}
