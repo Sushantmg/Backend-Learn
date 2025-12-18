@@ -7,14 +7,12 @@ import userRoutes from "./routes/user";
 import productRoutes from "./routes/product";
 import authRoutes from "./routes/auth";
 import cartRoutes from "./routes/cart";
+import { UploadRequest } from "./types/global-types";
 
 const app: Application = express();
 const port = 3005;
 
-// Multer setup
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
+
 
 // Middlewares
 app.use(express.json());
@@ -33,9 +31,9 @@ app.use("/products", productRoutes);
 app.use("/auth", authRoutes);
 
 // Test file route
-app.post("/file-example", (req: Request, res: Response) => {
+app.post("/file-example", upload.single("image"),(req: UploadRequest, res) => {
   try {
-    console.log(req.body);
+    console.log(req.image);
     res.json("OK");
   } catch (error) {
     console.error(error);
