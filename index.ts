@@ -2,6 +2,9 @@ import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import multer from "multer";
 import { upload } from "./middleware/upload";
+import fs from "fs";
+import path from "path";
+
 
 // Routes
 import userRoutes from "./routes/user";
@@ -48,8 +51,18 @@ app.post("/file-example", upload.single("image"), (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+const uploadFolder = path.join(process.cwd(), "uploads");
+
+if (!fs.existsSync(uploadFolder)) {
+  fs.mkdirSync(uploadFolder, { recursive: true });
+  console.log("📁 uploads folder created");
+} else {
+  console.log("✅ uploads folder already exists");
+}
 
 
+
+app.use("/uploads", express.static(uploadFolder));
 // Home route
 app.get("/", (req: Request, res: Response) => {
   res.send("🚀 API Server running! Use /users or /products");
