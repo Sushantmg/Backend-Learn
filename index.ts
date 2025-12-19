@@ -4,17 +4,17 @@ import fs from "fs";
 import path from "path";
 import { upload } from "./middleware/upload";
 
-// Routes
 import userRoutes from "./routes/user";
 import productRoutes from "./routes/product";
 import authRoutes from "./routes/auth";
 import cartRoutes from "./routes/cart";
+import db from "./db";
 
 const app: Application = express();
 const port = 3005;
 
 // --------------------
-// Middlewares
+// Global Middlewares
 // --------------------
 app.use(express.json());
 app.use(
@@ -37,6 +37,7 @@ if (!fs.existsSync(uploadFolder)) {
   console.log("✅ uploads folder already exists");
 }
 
+// Serve uploaded files
 app.use("/uploads", express.static(uploadFolder));
 
 // --------------------
@@ -50,18 +51,22 @@ app.use("/auth", authRoutes);
 // --------------------
 // File Upload Route
 // --------------------
-app.post("/file-example", upload.single("image"), (req, res) => {
+app.post("/file-example", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const timestamp = Date.now();
-    const filename = `${timestamp}-${req.file.originalname}`;
+    const filename = `${Date.now()}-${req.file.originalname}`;
     const filePath = path.join(uploadFolder, filename);
 
-    // ✅ Save file to uploads/
     fs.writeFileSync(filePath, req.file.buffer);
+
+    await db.fileUpload.create({
+      data: {
+        file: `/uploads/${filename}`,
+      },
+    });
 
     return res.json({
       message: "File uploaded successfully",
@@ -78,7 +83,7 @@ app.post("/file-example", upload.single("image"), (req, res) => {
 // Home route
 // --------------------
 app.get("/", (req: Request, res: Response) => {
-  res.send("🚀 API Server running! Use /users or /products");
+  res.send("🚀 API Server running!");
 });
 
 // --------------------
@@ -87,3 +92,4 @@ app.get("/", (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
+console.log(Object.keys(db));
