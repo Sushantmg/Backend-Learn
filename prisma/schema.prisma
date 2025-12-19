@@ -51,3 +51,8 @@ model UserCart {
 
   @@unique([user_id, product_id])
 }
+
+model FileUploads {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  file String
+}
