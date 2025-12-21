@@ -2,12 +2,15 @@ import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
+
 import { upload } from "./middleware/upload";
+import { fileUpload } from "./utils/fileService";
 
 import userRoutes from "./routes/user";
 import productRoutes from "./routes/product";
 import authRoutes from "./routes/auth";
 import cartRoutes from "./routes/cart";
+
 import db from "./db";
 
 const app: Application = express();
@@ -33,8 +36,6 @@ const uploadFolder = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadFolder)) {
   fs.mkdirSync(uploadFolder, { recursive: true });
   console.log("📁 uploads folder created");
-} else {
-  console.log("✅ uploads folder already exists");
 }
 
 // Serve uploaded files
@@ -51,33 +52,42 @@ app.use("/auth", authRoutes);
 // --------------------
 // File Upload Route
 // --------------------
-app.post("/file-example", upload.single("image"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+app.post(
+  "/file-example",
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({
+          message: "No file uploaded",
+        });
+      }
+
+      // ✅ use utility function
+      const uploadedFile = await fileUpload(file);
+
+      // Save file path in DB
+      const savedFile = await db.fileUpload.create({
+        data: {
+          file: uploadedFile.path,
+        },
+      });
+
+      return res.status(201).json({
+        message: "File uploaded successfully",
+        data: savedFile,
+        url: `http://localhost:${port}/${uploadedFile.path}`,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "File upload failed",
+      });
     }
-
-    const filename = `${Date.now()}-${req.file.originalname}`;
-    const filePath = path.join(uploadFolder, filename);
-
-    fs.writeFileSync(filePath, req.file.buffer);
-
-    await db.fileUpload.create({
-      data: {
-        file: `/uploads/${filename}`,
-      },
-    });
-
-    return res.json({
-      message: "File uploaded successfully",
-      filename,
-      url: `http://localhost:${port}/uploads/${filename}`,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server error" });
   }
-});
+);
 
 // --------------------
 // Home route
@@ -92,4 +102,5 @@ app.get("/", (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
-console.log(Object.keys(db));
+
+console.log("📦 DB Models:", Object.keys(db));
