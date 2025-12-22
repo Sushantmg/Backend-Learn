@@ -1,26 +1,45 @@
 import fs from "fs";
 import path from "path";
 
-export async function fileUpload(file: Express.Multer.File) {
+export async function fileUpload(
+  file: Express.Multer.File,
+  subDirectory?: string
+) {
   try {
-    const uploadFolder = path.join(process.cwd(), "uploads");
+    const baseUploadFolder = path.join(process.cwd(), "uploads");
 
-    // Ensure folder exists
-    fs.mkdirSync(uploadFolder, { recursive: true });
+    // Ensure base uploads folder exists
+    fs.mkdirSync(baseUploadFolder, { recursive: true });
 
-    // Sanitize filename
+    // If subDirectory provided, create it
+    const finalUploadFolder = subDirectory
+      ? path.join(baseUploadFolder, subDirectory)
+      : baseUploadFolder;
+
+    fs.mkdirSync(finalUploadFolder, { recursive: true });
+
+    // Sanitize filename (extra safe)
     const timestamp = Date.now();
-    const safeName = file.originalname.replace(/\s+/g, "_");
+    const safeName = path
+      .basename(file.originalname)
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9._-]/g, "");
+
     const fileName = `${timestamp}_${safeName}`;
 
-    const filePath = path.join(uploadFolder, fileName);
+    const filePath = path.join(finalUploadFolder, fileName);
 
-    // Async write
+    // Async write (non-blocking)
     await fs.promises.writeFile(filePath, file.buffer);
+
+    // Relative path for DB storage
+    const relativePath = subDirectory
+      ? `uploads/${subDirectory}/${fileName}`
+      : `uploads/${fileName}`;
 
     return {
       fileName,
-      path: `uploads/${fileName}`,
+      path: relativePath,
       size: file.size,
       mimetype: file.mimetype,
     };
