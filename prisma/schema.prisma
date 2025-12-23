@@ -31,6 +31,7 @@ model Product {
   title       String
   description String
   price       Float
+  image       String
   rating      Int
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
