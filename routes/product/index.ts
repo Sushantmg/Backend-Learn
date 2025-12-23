@@ -8,6 +8,7 @@ import {
 } from "./handler";
 
 import { validateToken, allowRoles } from "../../middleware/authMiddleware";
+import { upload } from "../../middleware/upload";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.post(
   "/",
   validateToken,
   allowRoles("STAFF", "SUPERUSER"),
+  upload.single("image"),
   postProduct
 );
 
