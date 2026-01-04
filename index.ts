@@ -48,46 +48,46 @@ app.use("/cart", cartRoutes);
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
 app.use("/auth", authRoutes);
-
+app.use("/uploads", express.static("uploads/products/"));
 // --------------------
 // File Upload Route
 // --------------------
-app.post(
-  "/file-example",
-  upload.single("image"),
-  async (req: Request, res: Response) => {
-    try {
-      const file = req.file;
+// app.post(
+//   "/file-example",
+//   upload.single("image"),
+//   async (req: Request, res: Response) => {
+//     try {
+//       const file = req.file;
 
-      if (!file) {
-        return res.status(400).json({
-          message: "No file uploaded",
-        });
-      }
+//       if (!file) {
+//         return res.status(400).json({
+//           message: "No file uploaded",
+//         });
+//       }
 
-      // ✅ use utility function
-      const uploadedFile = await fileUpload(file);
+//       // ✅ use utility function
+//       const uploadedFile = await fileUpload(file);
 
-      // Save file path in DB
-      const savedFile = await db.fileUpload.create({
-        data: {
-          file: uploadedFile.path,
-        },
-      });
+//       // Save file path in DB
+//       const savedFile = await db.fileUpload.create({
+//         data: {
+//           file: uploadedFile.path,
+//         },
+//       });
 
-      return res.status(201).json({
-        message: "File uploaded successfully",
-        data: savedFile,
-        url: `http://localhost:${port}/${uploadedFile.path}`,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({
-        message: "File upload failed",
-      });
-    }
-  }
-);
+//       return res.status(201).json({
+//         message: "File uploaded successfully",
+//         data: savedFile,
+//         url: `http://localhost:${port}/${uploadedFile.path}`,
+//       });
+//     } catch (error) {
+//       console.error(error);
+//       return res.status(500).json({
+//         message: "File upload failed",
+//       });
+//     }
+//   }
+// );
 
 // --------------------
 // Home route
