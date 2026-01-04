@@ -34,6 +34,7 @@ router.put(
   "/:id",
   validateToken,
   allowRoles("SUPERUSER"),
+  upload.single("image"),
   updateProduct
 );
 

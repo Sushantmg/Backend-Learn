@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../../prisma-config";
-
+import { fileUpload, fileDelete } from "../../utils/fileService";
 // -------------------------
 // GET ALL PRODUCTS
 // -------------------------
@@ -47,12 +47,20 @@ export const postProduct = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "All fields are required" });
     }
 
+    // Check duplicate title
     const existingProduct = await prisma.product.findFirst({
-      where: { title }, // ✅ findFirst (title is NOT unique)
+      where: { title },
     });
 
     if (existingProduct) {
       return res.status(400).json({ error: "Product title already exists" });
+    }
+
+    let imagePath: string | null = null;
+
+    // 📸 Handle image upload
+    if (req.file) {
+      imagePath = fileUpload(req.file, "products");
     }
 
     const newProduct = await prisma.product.create({
@@ -61,6 +69,7 @@ export const postProduct = async (req: Request, res: Response) => {
         description,
         price: Number(price),
         rating: Number(rating),
+        image: imagePath,
       },
     });
 
@@ -73,10 +82,11 @@ export const postProduct = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Something went wrong" });
   }
 };
-
 // -------------------------
 // UPDATE PRODUCT
 // -------------------------
+
+
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -90,6 +100,19 @@ export const updateProduct = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
+    let imagePath = product.image; // keep old image by default
+
+    // 📸 If new image is uploaded
+    if (req.file) {
+      // delete old image if exists
+      if (product.image) {
+        fileDelete(product.image);
+      }
+
+      // upload new image
+      imagePath = fileUpload(req.file, "products");
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
@@ -97,15 +120,21 @@ export const updateProduct = async (req: Request, res: Response) => {
         description: description ?? product.description,
         price: price !== undefined ? Number(price) : product.price,
         rating: rating !== undefined ? Number(rating) : product.rating,
+        image: imagePath,
       },
     });
 
-    res.status(200).json(updatedProduct);
+    res.status(200).json({
+      message: "Product updated successfully",
+      data: updatedProduct,
+    });
   } catch (error) {
     console.error("Error in updateProduct:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 };
+
+
 
 // -------------------------
 // DELETE PRODUCT
