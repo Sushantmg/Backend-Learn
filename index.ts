@@ -10,8 +10,11 @@ import userRoutes from "./routes/user";
 import productRoutes from "./routes/product";
 import authRoutes from "./routes/auth";
 import cartRoutes from "./routes/cart";
+import nodemailer from "nodemailer";
+
 
 import db from "./db";
+import { transporter } from "./utils/mailService";
 
 const app: Application = express();
 const port = 3005;
@@ -88,6 +91,32 @@ app.use("/uploads", express.static("uploads/products/"));
 //     }
 //   }
 // );
+  app.get("/email-example", async (req, res) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Email from SUSHAN" <${process.env.EMAIL_USER}>`,
+      to: "sushantamang03@gmail.com",
+      subject: "Hello ✔",
+      text: "Hello my family", // plain text
+      html: "<b>Hello world?</b>", // html
+    });
+
+    // send success response
+    res.status(200).json({
+      message: "Email sent successfully",
+      messageId: info.messageId,
+      previewUrl: nodemailer.getTestMessageUrl(info),
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to send email",
+      error,
+    });
+  }
+});
+
 
 // --------------------
 // Home route
