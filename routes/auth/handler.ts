@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-
+import nodemailer from "nodemailer";
 dotenv.config();
-
+import { transporter } from "../../utils/mailService";
 const prisma = new PrismaClient();
 const SECRET_KEY = process.env.JWT_SECRET as string;
 
@@ -211,10 +211,77 @@ export const changePassword = async (
       where: { id: String(id) },
       data: { password: hashedNewPassword },
     });
+    const info = await transporter.sendMail({
+  from: `"Email from team" <${process.env.EMAIL_USER}>`,
+      to: "email",
+      subject: "Welcome to our app",
+      text: "Welcome to our app", // plain text
+      html: ` <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome Email</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333333;
+    }
+    p {
+      color: #555555;
+      line-height: 1.5;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 20px;
+      background-color: #4CAF50;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #999999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to My App!</h1>
+    <p>Hello <strong>{{username}}</strong>,</p>
+    <p>Thank you for joining our app. We are excited to have you on board! 🎉</p>
+    <p>Get started by logging in and exploring our features.</p>
+    <a href="{{loginLink}}" class="button">Login Now</a>
+    <div class="footer">
+      &copy; 2026 My App. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+`, // html
+});
+
+console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
 
     res.json({ result: "Password successfully changed" });
   } catch (error) {
     console.error("Change password error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
+ 
 };
