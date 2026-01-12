@@ -5,9 +5,9 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 dotenv.config();
+import { generateOtp } from "../../utils/otp";
 import { getTransporter } from "../../utils/mailService";
 import { welcomeEmailTemplate } from "../../templates/welcome";
-
 
 const prisma = new PrismaClient();
 const SECRET_KEY = process.env.JWT_SECRET as string;
@@ -69,18 +69,26 @@ export const userRegister = async (req: Request, res: Response) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ error: "User with this email already exists" });
+      return res
+        .status(409)
+        .json({ error: "User with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
+ const now = new Date();
+now.setMinutes(now.getMinutes() + 10);
+const otp = generateOtp();
+const newUser = await prisma.tempUser.create({
+  data: {
+    name,
+    email,
+    password: hashedPassword,
+    otp,
+    expiry: now,
+  },
+});
+
 
     // Send welcome email
     const transporter = getTransporter();
@@ -90,7 +98,7 @@ export const userRegister = async (req: Request, res: Response) => {
       to: newUser.email,
       subject: "Welcome to My App!",
       text: `Hello ${newUser.name}, welcome to My App! 🎉`,
-      html: welcomeEmailTemplate(newUser.name, loginLink)
+      html: welcomeEmailTemplate(newUser.name, loginLink),
     });
 
     console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
@@ -118,7 +126,9 @@ export const staffRegister = async (req: Request, res: Response) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ error: "Staff with this email already exists" });
+      return res
+        .status(409)
+        .json({ error: "Staff with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -268,13 +278,10 @@ export const changePassword = async (
       where: { id: String(id) },
       data: { password: hashedNewPassword },
     });
-   
-
 
     res.json({ result: "Password successfully changed" });
   } catch (error) {
     console.error("Change password error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
- 
 };

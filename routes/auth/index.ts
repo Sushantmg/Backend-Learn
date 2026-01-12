@@ -18,13 +18,9 @@ const router = Router();
 
 router.post("/login", login);
 router.post("/register", userRegister);
+router.post("/verify-registration-otp");
 
-router.post(
-  "/staff-register",
-  validateToken,
-  superUserOnly,
-  staffRegister
-);
+router.post("/staff-register", validateToken, superUserOnly, staffRegister);
 
 router.get("/me", validateToken, getMe);
 router.post("/change-password", validateToken, changePassword);
