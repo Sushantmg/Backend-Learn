@@ -26,6 +26,18 @@ model User {
   userCart UserCart[]
 }
 
+model tempUser {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  email      String   @unique
+  password   String
+  otp        Int
+  expiry     DateTime
+  role       Roles    @default(USER)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
 model Product {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
