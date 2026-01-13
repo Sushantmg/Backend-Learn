@@ -5,6 +5,7 @@ import {
   staffRegister,
   getMe,
   changePassword,
+  verifyRegistration,
 } from "./handler";
 
 import {
@@ -18,7 +19,7 @@ const router = Router();
 
 router.post("/login", login);
 router.post("/register", userRegister);
-router.post("/verify-registration-otp");
+router.post("/verify-registration-otp",verifyRegistration);
 
 router.post("/staff-register", validateToken, superUserOnly, staffRegister);
 

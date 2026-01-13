@@ -114,6 +114,78 @@ const newUser = await prisma.tempUser.create({
   }
 };
 
+export const verifyRegistration = async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+
+    // 1️⃣ Validate input
+    if (!email || !otp) {
+      return res.status(400).json({ error: "Email and OTP are required" });
+    }
+
+    // 2️⃣ Find temp user
+    const tempUser = await prisma.tempUser.findUnique({
+      where: { email },
+    });
+
+    if (!tempUser) {
+      return res
+        .status(404)
+        .json({ error: "Email not found. Please register first." });
+    }
+
+    // 3️⃣ Check OTP
+    if (Number(otp) !== tempUser.otp) {
+      return res.status(401).json({ error: "Invalid OTP" });
+    }
+
+    // 4️⃣ Check expiry
+    const now = new Date();
+    if (now > tempUser.expiry) {
+      return res
+        .status(401)
+        .json({ error: "OTP has expired. Please resend." });
+    }
+
+    // 5️⃣ Create real user
+    const user = await prisma.user.create({
+      data: {
+        email: tempUser.email,
+        name: tempUser.name,
+        password: tempUser.password,
+        role: "USER",
+      },
+    });
+
+    // 6️⃣ Delete temp user
+    await prisma.tempUser.delete({
+      where: { email },
+    });
+
+    // 7️⃣ Send welcome email
+    const transporter = getTransporter();
+    const info = await transporter.sendMail({
+      from: `"My App Team" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Welcome to My App 🎉",
+      html: welcomeEmailTemplate(user.name,loginLink),
+    });
+
+    console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+
+    // 8️⃣ Final response
+    return res.status(201).json({
+      result: "Registration verified successfully",
+      user,
+    });
+  } catch (error: any) {
+    console.error("Verify registration error:", error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Something went wrong" });
+  }
+};
+
 /**
  * STAFF REGISTER (SUPERUSER ONLY)
  */
