@@ -8,6 +8,7 @@ dotenv.config();
 import { generateOtp } from "../../utils/otp";
 import { getTransporter } from "../../utils/mailService";
 import { welcomeEmailTemplate } from "../../templates/welcome";
+import { registrationOtpTemplate } from "../../templates/registrationOtp";
 
 const prisma = new PrismaClient();
 const SECRET_KEY = process.env.JWT_SECRET as string;
@@ -96,9 +97,9 @@ const newUser = await prisma.tempUser.create({
     const info = await transporter.sendMail({
       from: `"My App Team" <${process.env.EMAIL_USER}>`,
       to: newUser.email,
-      subject: "Welcome to My App!",
-      text: `Hello ${newUser.name}, welcome to My App! 🎉`,
-      html: welcomeEmailTemplate(newUser.name, loginLink),
+      subject: "Your Registration OTP!",
+      text: `Hello ${newUser.name}, Here is your Registration OTP 🎉`,
+      html: registrationOtpTemplate (newUser.name,otp,10),
     });
 
     console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
