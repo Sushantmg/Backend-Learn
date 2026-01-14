@@ -185,6 +185,62 @@ export const verifyRegistration = async (req: Request, res: Response) => {
       .json({ error: error.message || "Something went wrong" });
   }
 };
+export const resendOtp = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    // 1️⃣ Validate input
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // 2️⃣ Find temp user
+    const tempUser = await prisma.tempUser.findUnique({
+      where: { email },
+    });
+
+    if (!tempUser) {
+      return res
+        .status(404)
+        .json({ error: "Email not found. Please register first." });
+    }
+
+    // 3️⃣ Generate new OTP & expiry
+    const otp = generateOtp();
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10);
+
+    // 4️⃣ Update temp user
+    await prisma.tempUser.update({
+      where: { email },
+      data: {
+        otp,
+        expiry,
+      },
+    });
+
+    // 5️⃣ Send OTP email
+    const transporter = getTransporter();
+    const info = await transporter.sendMail({
+      from: `"My App Team" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your New Registration OTP",
+      html: registrationOtpTemplate(tempUser.name, otp, 10),
+    });
+
+    console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+
+    // 6️⃣ Response
+    return res.status(200).json({
+      result: "OTP resent successfully",
+    });
+  } catch (error: any) {
+    console.error("Resend OTP error:", error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Something went wrong" });
+  }
+};
 
 /**
  * STAFF REGISTER (SUPERUSER ONLY)
